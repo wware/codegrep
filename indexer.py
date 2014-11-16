@@ -64,6 +64,16 @@ for _dir, _, _files in os.walk(root):
     if not _files:
         continue
 
+    print _dir
+    ff = os.path.join(_dir, ".codegrep.index/files")
+    if os.path.exists(ff):
+        tf = os.path.getctime(ff)
+        sources = map(lambda x: os.path.join(_dir, x), _files)
+        ts = map(os.path.getctime, sources)
+        ts.sort()
+        if tf > ts[-1]:
+            continue
+
     try:
         # directory names can include parens, spaces, other garbage
         cgdir = os.path.join(_dir, ".codegrep.index")
@@ -72,7 +82,6 @@ for _dir, _, _files in os.walk(root):
     except:
         continue
 
-    print _dir
     d0 = {}
     fi = 0
     for filename in _files:
@@ -112,7 +121,10 @@ for _dir, _, _files in os.walk(root):
                     d[key1] = {fi: None}
         fi += 1
 
-    cPickle.dump(_files, open(cgdir + "/files", "w"))
-    for key0 in d0.keys():
-        d = dict([(k, v.keys()) for k, v in d0[key0].items()])
-        cPickle.dump(d, open(os.path.join(cgdir, str(ord(key0))), "w"))
+    try:
+        cPickle.dump(_files, open(cgdir + "/files", "w"))
+        for key0 in d0.keys():
+            d = dict([(k, v.keys()) for k, v in d0[key0].items()])
+            cPickle.dump(d, open(os.path.join(cgdir, str(ord(key0))), "w"))
+    except KeyboardInterrupt:
+        os.system('rm -rf ' + cgdir)
