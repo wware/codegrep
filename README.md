@@ -24,3 +24,11 @@ To use this, do the following.
 ```bash
 cgrep foobar
 ```
+
+Future things to try
+==
+
+Handle the commonest grep flags, `-i`, `-n`, and `-l`. The `-l` flag is
+already the default behavior, but probably default behavior should be the
+same as grep, like `-n` without line numbers. The most complicated will be
+`-i`

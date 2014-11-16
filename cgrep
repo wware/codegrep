@@ -5,10 +5,9 @@ import os, sys, string, re, cPickle, subprocess
 root = os.environ["CODEGREPROOT"]
 
 
-def matching_files(term):
+def found_files(term):
     key0 = term[:1]
     key1 = term[1:3]
-    fs = set()
     for _dir, _, _ in os.walk(root):
         if _dir.endswith(".codegrep.index"):
             continue
@@ -24,16 +23,48 @@ def matching_files(term):
         if key1 not in d:
             continue
 
-        p = subprocess.Popen(["xargs", "grep", "-l", term],
-                             stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE)
-        for i in d[key1]:
-            p.stdin.write(os.path.join(_dir, files[i]) + "\n")
-        p.stdin.close()
-        for L in p.stdout.readlines():
-            L = L.rstrip()
-            if L not in fs:
-                fs.add(L)
+        return (os.path.join(_dir, files[i]) for i in d[key1])
+
+
+def matching_files(term):
+    def change_case(term, (flag0, flag1, flag2)):
+        def change_chr_case(c, bool):
+            if not bool:
+                return c
+            try:
+                string.uppercase.index(c)
+                return string.lower(c)
+            except ValueError:
+                try:
+                    string.lowercase.index(c)
+                    return string.upper(c)
+                except ValueError:
+                    return c
+        return (change_chr_case(term[0], flag0) +
+                change_chr_case(term[1], flag1) +
+                change_chr_case(term[2], flag2))
+    fs = set()
+    p = subprocess.Popen(["xargs", "grep", "-il", term],
+                         stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE)
+    for term1 in [
+        change_case(term, (False, False, False)),
+        # change_case(term, (False, False, True)),
+        # change_case(term, (False, True, False)),
+        # change_case(term, (False, True, True)),
+        # change_case(term, (True, False, False)),
+        # change_case(term, (True, False, True)),
+        # change_case(term, (True, True, False)),
+        # change_case(term, (True, True, True))
+    ]:
+        print repr(term1)
+        for f in found_files(term1):
+            p.stdin.write(f + "\n")
+    p.stdin.close()
+    for L in p.stdout.readlines():
+        L = L.rstrip()
+        if L not in fs:
+            fs.add(L)
             yield L
 
 
