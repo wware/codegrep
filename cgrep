@@ -2,7 +2,10 @@
 
 import os, sys, string, re, cPickle, subprocess
 
-root = os.environ["CODEGREPROOT"]
+if len(sys.argv) > 2:
+    root = sys.argv[2]
+else:
+    root = os.environ["CODEGREPROOT"]
 
 
 def matching_files(term):
