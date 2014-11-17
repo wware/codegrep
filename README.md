@@ -16,7 +16,7 @@ To use this, do the following.
 * Put `cgrep` in your path.
 * Set the environment variable `CODEGREPROOT` to the root of the directory
   tree you want to search.
-* Run `build_c.sh` to build a C module that accelerates the indexer.
+* Run `make` to build a C module that accelerates the indexer.
 * Run `indexer.py` to index the files to be searched. For a large code base
   this is going to take some time.
 * Now you can do searches like this:
