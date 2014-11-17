@@ -24,3 +24,25 @@ To use this, do the following.
 ```bash
 cgrep foobar
 ```
+
+Other stuff
+==
+
+Let's add a `-x` command line argument to `cgrep` to do indexing without a
+search. And there should be indexing happening during the normal search,
+which will normally take minimal time because the `.codegrep.index/files`
+will be newer than the source files. So it would be like this.
+
+```python
+    for each directory:
+        index the directory if index is stale
+        if not dashX:
+            do search
+```
+
+The other thing is that the root should be specified on the command line as
+is the case with normal grep. If it's not explicitly specified them it's just
+the current directory.
+
+Also add a command line option for cleaning up, i.e. removing all the
+`.codegrep.index` directories.
