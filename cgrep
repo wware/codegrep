@@ -46,6 +46,7 @@ def chooser(f):
 
 
 verbose = False
+index_only = False
 
 
 def make_index(_dir, _files):
@@ -131,6 +132,8 @@ def matching_files(root, term):
                 continue
             make_index(_dir, _files)
 
+        if index_only:
+            continue
         cgdir = os.path.join(_dir, ".codegrep.index")
         if not os.path.exists(cgdir):
             continue
@@ -161,9 +164,9 @@ def usage():
 
 
 def main():
-    global verbose
+    global verbose, index_only
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hxinv", ["help", "clean"])
+        opts, args = getopt.getopt(sys.argv[1:], "hxinvI", ["help", "clean"])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(err) # will print something like "option -a not recognized"
@@ -171,6 +174,7 @@ def main():
         sys.exit(2)
     cleanup = False
     verbose = False
+    index_only = False
     for o, a in opts:
         if o == "-v":
             verbose = True
@@ -179,6 +183,8 @@ def main():
             sys.exit()
         elif o in ("-x", "--clean"):
             cleanup = True
+        elif o in ("-I"):
+            index_only = True
         elif o in ("-i",):
             raise Exception("Unimplemented")
         elif o in ("-n",):
@@ -187,7 +193,7 @@ def main():
             assert False, "unhandled option"
 
     root = "."
-    if cleanup:
+    if cleanup or index_only:
         if len(args) == 0:
             pass
         elif len(args) == 1:
