@@ -1,25 +1,141 @@
 #!/usr/bin/env python
 
-import os, sys, string, re, cPickle, subprocess
-
-if len(sys.argv) > 2:
-    root = sys.argv[2]
-else:
-    root = os.environ["CODEGREPROOT"]
+import os, sys, string, re, cPickle, subprocess, getopt
 
 
-def matching_files(term):
+def chooser(f):
+    return (f.endswith(".cs") or
+            f.endswith(".xaml") or
+            f.endswith(".reg") or
+            f.endswith(".proj") or
+            f.endswith(".prj") or
+            f.endswith(".txt") or
+            f.endswith(".md") or
+            f.endswith(".rst") or
+            f.endswith(".text") or
+            f.endswith(".h") or
+            f.endswith(".c") or
+            f.endswith(".cpp") or
+            f.endswith(".cxx") or
+            f.endswith(".C") or
+            f.endswith(".rb") or
+            f.endswith(".pl") or
+            f.endswith(".pm") or
+            f.endswith(".xml") or
+            f.endswith(".html") or
+            f.endswith(".css") or
+            f.endswith(".js") or
+            f.endswith(".py") or
+            f.endswith(".xml") or
+            f.endswith(".pro") or
+            f.endswith(".data") or
+            f.endswith(".ref") or
+            f.endswith(".qdoc") or
+            f.endswith(".conf") or
+            f.endswith(".qml") or
+            f.endswith(".pri") or
+            f.endswith(".prf") or
+            f.endswith(".ent") or
+            f.endswith(".ref") or
+            f.endswith(".ent") or
+            f.endswith(".qrc") or
+            f.endswith(".ui") or
+            f.endswith(".qmake") or
+            f.endswith(".dtd") or
+            ("." not in f))
+
+
+verbose = False
+
+
+def make_index(_dir, _files):
+    if verbose:
+        print "Indexing " + _dir
+    ff = os.path.join(_dir, ".codegrep.index/files")
+    if os.path.exists(ff):
+        tf = os.path.getctime(ff)
+        sources = map(lambda x: os.path.join(_dir, x), _files)
+        ts = map(os.path.getctime, sources)
+        ts.sort()
+        if tf > ts[-1]:
+            # already up to date
+            return
+
+    cgdir = os.path.join(_dir, ".codegrep.index")
+    os.system("mkdir -p " + cgdir)
+
+    d0 = {}
+    fi = 0
+    for filename in _files:
+        if True:
+            # C EXTENSION
+            if False:
+                # DEBUGGING MEMORY LEAKS
+                import objgraph
+                print "===", sys.getrefcount(d0)
+                print objgraph.show_most_common_types(limit=20)
+            import cg
+            cg.scan(d0, fi, os.path.join(_dir, filename))
+        else:
+            # REFERENCE IMPLEMENTATION
+            R = open(os.path.join(_dir, filename)).read()
+            if len(R) < 3:
+                continue
+            for i in range(len(R) - 2):
+                # all this stuff should go into a swigged C function
+                key0 = R[i]
+                if not (32 <= ord(key0) <= 176):
+                    continue
+                if not (32 <= ord(R[i+1]) <= 176):
+                    continue
+                # assume N==3 here
+                if not (32 <= ord(R[i+2]) <= 176):
+                    continue
+                key1 = R[i+1:i+3]
+                try:
+                    d = d0[key0]
+                except KeyError:
+                    d = d0[key0] = {}
+                try:
+                    d[key1][fi] = None
+                except KeyError:
+                    d[key1] = {fi: None}
+        fi += 1
+
+    try:
+        cPickle.dump(_files, open(cgdir + "/files", "w"))
+        for key0 in d0.keys():
+            d = dict([(k, v.keys()) for k, v in d0[key0].items()])
+            cPickle.dump(d, open(os.path.join(cgdir, str(ord(key0))), "w"))
+    except KeyboardInterrupt:
+        os.system('rm -rf ' + cgdir)
+        sys.exit(0)
+
+
+def matching_files(root, term):
     key0 = term[:1]
     key1 = term[1:3]
     fs = set()
-    for _dir, _, _ in os.walk(root):
+    for _dir, _subdirs, _files in os.walk(root):
+        if "/.git" in _dir:
+            continue
+        if "/.svn" in _dir:
+            continue
+        if "(" in _dir or ")" in _dir or " " in _dir:
+            continue
         if _dir.endswith(".codegrep.index"):
             continue
+        if ".codegrep.index" not in _subdirs:
+            _files = filter(chooser, _files)
+            if not _files:
+                continue
+            make_index(_dir, _files)
+
         cgdir = os.path.join(_dir, ".codegrep.index")
         if not os.path.exists(cgdir):
             continue
-        files = cPickle.load(open(cgdir + "/files"))
         try:
+            files = cPickle.load(open(cgdir + "/files"))
             inf = open(os.path.join(cgdir, str(ord(key0))))
         except IOError:
             continue
@@ -40,6 +156,64 @@ def matching_files(term):
             yield L
 
 
-if __name__ == "__main__":
-    for f in matching_files(sys.argv[1]):
+def usage():
+    print "Usage stuff: TODO"
+
+
+def main():
+    global verbose
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hxinv", ["help", "clean"])
+    except getopt.GetoptError as err:
+        # print help information and exit:
+        print(err) # will print something like "option -a not recognized"
+        usage()
+        sys.exit(2)
+    cleanup = False
+    verbose = False
+    for o, a in opts:
+        if o == "-v":
+            verbose = True
+        elif o in ("-h", "--help"):
+            usage()
+            sys.exit()
+        elif o in ("-x", "--clean"):
+            cleanup = True
+        elif o in ("-i",):
+            raise Exception("Unimplemented")
+        elif o in ("-n",):
+            raise Exception("Unimplemented")
+        else:
+            assert False, "unhandled option"
+
+    root = "."
+    if cleanup:
+        if len(args) == 0:
+            pass
+        elif len(args) == 1:
+            root = args[0]
+        else:
+            raise Exception("what what what???")
+    else:
+        if len(args) == 1:
+            term = args[0]
+        elif len(args) == 2:
+            term = args[0]
+            root = args[1]
+        else:
+            raise Exception("what what what???")
+    root = os.path.realpath(root)
+
+    if cleanup:
+        for _dir, _, _ in os.walk(root):
+            if _dir.endswith("/.codegrep.index"):
+                if verbose:
+                    print "Removing " + _dir
+                os.system("rm -rf " + _dir)
+        sys.exit(0)
+
+    for f in matching_files(root, sys.argv[1]):
         print f
+
+if __name__ == "__main__":
+    main()
